@@ -42,7 +42,7 @@ module Travis
           config: File.read('.travis.lxd.yml')
         )
         response = if create_image? || update_image?
-                     session.post(endpoint, params, 'Content-Type' => 'application/json')
+                     session.post_raw(endpoint, params, 'Content-Type' => 'application/json')
                    else
                      session.delete(endpoint)
                    end
@@ -53,6 +53,10 @@ module Travis
           say 'Image updated'
         else
           warn 'Image deleted'
+        end
+        unless response['warnings'].nil?
+          say color("Additionally following warnings were generated:", [:bold, 'yellow'])
+          response['warnings'].each { |warning| warn color(warning, 'yellow') }
         end
       end
 
