@@ -41,22 +41,25 @@ module Travis
           image_name: create_image || update_image || delete_image,
           config: File.read('.travis.lxd.yml')
         )
-        response = if create_image? || update_image?
-                     session.post_raw(endpoint, params, 'Content-Type' => 'application/json')
-                   else
-                     session.delete(endpoint)
-                   end
+        begin
+          response = if create_image? || update_image?
+                       session.post_raw(endpoint, params, 'Content-Type' => 'application/json')
+                     else
+                       session.delete(endpoint)
+                     end
+        rescue Travis::Client::ValidationFailed => e
+          error e.message
+        end
 
-        if create_image?
-          say 'Image created'
-        elsif update_image?
-          say 'Image updated'
+        if create_image? || update_image?
+          say create_image? ? 'Image created' : 'Image updated'
+
+          unless response['warnings'].nil?
+            warn color('Additionally following warnings were generated:', [:bold, 'yellow'])
+            response['warnings'].each { |warning| warn color(warning, 'yellow') }
+          end
         else
           warn 'Image deleted'
-        end
-        unless response['warnings'].nil?
-          say color("Additionally following warnings were generated:", [:bold, 'yellow'])
-          response['warnings'].each { |warning| warn color(warning, 'yellow') }
         end
       end
 
